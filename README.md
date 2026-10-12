@@ -4,6 +4,8 @@
 
 **公開URL:** https://tai-hmb.github.io/MonthLeague/
 
+毎月、ルール1つ（ナワバリバトル＋ガチルール4種から）・ステージ3つ・ブキ5つが選ばれます。
+
 ## 使い方
 
 URLパラメータで指定できます。
@@ -16,9 +18,14 @@ https://tai-hmb.github.io/MonthLeague/?keyword=いつものメンバー&ym=2026-
 | --- | --- | --- |
 | `keyword` | キーワード（同じキーワードなら同じ結果） | なし |
 | `ym` | 年月（`YYYY-MM`） | 今月 |
-| `stages` | ステージ数（1〜10） | 3 |
-| `weapons` | ブキ数（1〜16） | 4 |
-| `nawabari` | `1` でナワバリバトルを含める | なし |
+
+## データの編集
+
+ルール・ステージ・ブキの一覧は `data/` フォルダにあります。
+
+- `data/rules.js` … ルール
+- `data/stages.js` … ステージ
+- `data/weapons.js` … ブキ（ブキ種別ごと）
 
 ## GitHub Pages の設定
 

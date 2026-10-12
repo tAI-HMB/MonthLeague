@@ -44,7 +44,7 @@
 
   form.controls {
     display: grid;
-    grid-template-columns: 2fr 1.2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr;
     gap: 12px;
     background: var(--panel);
     border: 1px solid var(--border);
@@ -135,8 +135,7 @@
   .toast.show { opacity: 1; }
 
   @media (max-width: 640px) {
-    form.controls { grid-template-columns: 1fr 1fr; }
-    .field.kw { grid-column: 1 / -1; }
+    form.controls { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -156,16 +155,7 @@
       <label for="ym">年月</label>
       <input type="month" id="ym">
     </div>
-    <div class="field">
-      <label for="ns">ステージ数</label>
-      <input type="number" id="ns" min="1" max="10" value="3">
-    </div>
-    <div class="field">
-      <label for="nw">ブキ数</label>
-      <input type="number" id="nw" min="1" max="16" value="4">
-    </div>
     <div class="options">
-      <label><input type="checkbox" id="nawabari"> ナワバリバトルを含める</label>
       <span class="spacer"></span>
       <button type="button" class="ghost" id="share">共有URLをコピー</button>
     </div>
@@ -202,43 +192,12 @@
 </div>
 <div class="toast" id="toast">コピーしました</div>
 
+<script src="data/rules.js"></script>
+<script src="data/stages.js"></script>
+<script src="data/weapons.js"></script>
 <script>
-// ===== データ（スプラトゥーン3） =====
-const RULES = [
-  { name: "ガチエリア", color: "var(--rule-area)" },
-  { name: "ガチヤグラ", color: "var(--rule-yagura)" },
-  { name: "ガチホコバトル", color: "var(--rule-hoko)" },
-  { name: "ガチアサリ", color: "var(--rule-asari)" },
-];
-const NAWABARI = { name: "ナワバリバトル", color: "var(--rule-nawabari)" };
-
-const STAGES = [
-  "ユノハナ大渓谷", "ゴンズイ地区", "ヤガラ市場", "マテガイ放水路", "ナメロウ金属",
-  "マサバ海峡大橋", "キンメダイ美術館", "マヒマヒリゾート&スパ", "海女美術大学", "チョウザメ造船",
-  "ザトウマーケット", "スメーシーワールド", "クサヤ温泉", "ヒラメが丘団地", "ナンプラー遺跡",
-  "マンタマリア号", "タラポートショッピングパーク", "コンブトラック", "タカアシ経済特区", "オヒョウ海運",
-  "バイガイ亭", "ネギトロ炭鉱", "カジキ空港", "リュウグウターミナル", "デカライン高架下",
-];
-
-const WEAPON_CLASSES = {
-  "シューター": ["ボールドマーカー", "わかばシューター", "シャープマーカー", "プロモデラーMG", "スプラシューター",
-    ".52ガロン", "N-ZAP85", "プライムシューター", ".96ガロン", "ジェットスイーパー",
-    "スペースシューター", "L3リールガン", "H3リールガン", "ボトルガイザー"],
-  "ブラスター": ["ノヴァブラスター", "ホットブラスター", "ロングブラスター", "クラッシュブラスター",
-    "ラピッドブラスター", "Rブラスターエリート", "S-BLAST92"],
-  "ローラー": ["カーボンローラー", "スプラローラー", "ダイナモローラー", "ヴァリアブルローラー", "ワイドローラー"],
-  "フデ": ["パブロ", "ホクサイ", "フィンセント"],
-  "チャージャー": ["スクイックリンα", "スプラチャージャー", "スプラスコープ", "リッター4K", "4Kスコープ",
-    "14式竹筒銃・甲", "ソイチューバー", "R-PEN/5H"],
-  "スロッシャー": ["バケットスロッシャー", "ヒッセン", "スクリュースロッシャー", "オーバーフロッシャー",
-    "エクスプロッシャー", "モップリン"],
-  "スピナー": ["スプラスピナー", "バレルスピナー", "ハイドラント", "クーゲルシュライバー", "ノーチラス47", "イグザミナー"],
-  "マニューバー": ["スパッタリー", "スプラマニューバー", "ケルビン525", "デュアルスイーパー",
-    "クアッドホッパーブラック", "ガエンFF"],
-  "シェルター": ["パラシェルター", "キャンピングシェルター", "スパイガジェット", "24式張替傘・甲"],
-  "ストリンガー": ["トライストリンガー", "LACT-450", "フルイドV"],
-  "ワイパー": ["ドライブワイパー", "ジムワイパー", "デンタルワイパーミント"],
-};
+const STAGE_COUNT = 3;
+const WEAPON_COUNT = 5;
 const WEAPONS = Object.entries(WEAPON_CLASSES).flatMap(([cls, list]) => list.map(name => ({ name, cls })));
 
 // ===== シード付き乱数 =====
@@ -289,27 +248,23 @@ function draw(list, count, keyword, category, monthIndex) {
     if (!seen.has(key)) { seen.add(key); out.push(item); }
     pos++;
   }
-  return out;
+  // 表示は元のリスト順に揃える
+  return out.sort((a, b) => list.indexOf(a) - list.indexOf(b));
 }
 
-function generate(keyword, year, month, opts) {
+function generate(keyword, year, month) {
   const idx = year * 12 + (month - 1);
-  const rules = opts.nawabari ? [NAWABARI, ...RULES] : RULES;
   return {
-    rule: draw(rules, 1, keyword, "rule" + (opts.nawabari ? "+n" : ""), idx)[0],
-    stages: draw(STAGES, opts.stages, keyword, "stage", idx),
-    weapons: draw(WEAPONS, opts.weapons, keyword, "weapon", idx),
+    rule: draw(RULES, 1, keyword, "rule", idx)[0],
+    stages: draw(STAGES, STAGE_COUNT, keyword, "stage", idx),
+    weapons: draw(WEAPONS, WEAPON_COUNT, keyword, "weapon", idx),
   };
 }
 
 // ===== UI =====
 const $ = id => document.getElementById(id);
-const els = { kw: $("kw"), ym: $("ym"), ns: $("ns"), nw: $("nw"), nawabari: $("nawabari") };
+const els = { kw: $("kw"), ym: $("ym") };
 
-function clampInt(v, min, max, def) {
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : def;
-}
 function currentYM() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -325,11 +280,6 @@ function state() {
   return {
     keyword: els.kw.value.trim(),
     y: ym.y, m: ym.m,
-    opts: {
-      stages: clampInt(els.ns.value, 1, 10, 3),
-      weapons: clampInt(els.nw.value, 1, 16, 4),
-      nawabari: els.nawabari.checked,
-    },
   };
 }
 function esc(s) {
@@ -339,15 +289,12 @@ function buildQuery(s) {
   const p = new URLSearchParams();
   if (s.keyword) p.set("keyword", s.keyword);
   p.set("ym", `${s.y}-${String(s.m).padStart(2, "0")}`);
-  if (s.opts.stages !== 3) p.set("stages", s.opts.stages);
-  if (s.opts.weapons !== 4) p.set("weapons", s.opts.weapons);
-  if (s.opts.nawabari) p.set("nawabari", "1");
   return p.toString();
 }
 
 function render() {
   const s = state();
-  const r = generate(s.keyword, s.y, s.m, s.opts);
+  const r = generate(s.keyword, s.y, s.m);
 
   $("title").innerHTML = `${s.y}年${s.m}月<small>${s.keyword ? "「" + esc(s.keyword) + "」" : "キーワードなし"}</small>`;
   $("rule").innerHTML = `<span class="rule-badge" style="--rc:${r.rule.color}">${esc(r.rule.name)}</span>`;
@@ -357,7 +304,7 @@ function render() {
   $("yearTitle").textContent = `${s.y}年の一覧`;
   let rows = "";
   for (let m = 1; m <= 12; m++) {
-    const x = generate(s.keyword, s.y, m, s.opts);
+    const x = generate(s.keyword, s.y, m);
     rows += `<tr data-m="${m}" class="${m === s.m ? "current" : ""}">
       <td>${m}月</td>
       <td><span class="dot" style="--rc:${x.rule.color}"></span>${esc(x.rule.name)}</td>
@@ -383,9 +330,6 @@ function shiftMonth(delta) {
   els.kw.value = p.get("keyword") ?? p.get("k") ?? "";
   const ym = parseYM(p.get("ym"));
   els.ym.value = ym ? `${ym.y}-${String(ym.m).padStart(2, "0")}` : currentYM();
-  els.ns.value = clampInt(p.get("stages"), 1, 10, 3);
-  els.nw.value = clampInt(p.get("weapons"), 1, 16, 4);
-  els.nawabari.checked = p.get("nawabari") === "1";
 
   $("form").addEventListener("input", render);
   $("form").addEventListener("submit", e => { e.preventDefault(); render(); });
