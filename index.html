@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>マンスリーリーグ</title>
+<style>
+  :root {
+    --bg: #14121c;
+    --panel: #1f1c2b;
+    --panel-2: #2a2639;
+    --text: #f3f1fa;
+    --muted: #a49fb8;
+    --accent: #c8f031;
+    --accent-2: #8a5cff;
+    --border: #3a3550;
+    --rule-area: #ff8a3d;
+    --rule-yagura: #4fa3ff;
+    --rule-hoko: #ffd23d;
+    --rule-asari: #ff5fa2;
+    --rule-nawabari: #c8f031;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: clamp(26px, 5vw, 38px);
+    letter-spacing: .04em;
+  }
+  header h1 span { color: var(--accent); }
+  header p { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+
+  form.controls {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1fr 1fr;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .field input[type=text], .field input[type=month], .field input[type=number] {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 15px;
+    font-family: inherit;
+    color-scheme: dark;
+  }
+  .field input:focus { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+  .options {
+    grid-column: 1 / -1;
+    display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center;
+    font-size: 14px; color: var(--muted);
+  }
+  .options label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .options .spacer { flex: 1; }
+  button {
+    background: var(--accent); color: #1a1a1a; border: 0; border-radius: 8px;
+    padding: 9px 16px; font-weight: 700; font-family: inherit; font-size: 14px; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button:hover { filter: brightness(1.08); }
+
+  .month-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 28px 0 12px;
+  }
+  .month-nav h2 { margin: 0; font-size: 24px; }
+  .month-nav h2 small { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 8px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card h3 { margin: 0 0 12px; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .08em; }
+
+  .rule-badge {
+    display: inline-block;
+    font-size: clamp(22px, 4vw, 30px);
+    font-weight: 800;
+    padding: 6px 18px;
+    border-radius: 999px;
+    color: #15131d;
+    background: var(--rc, var(--accent));
+  }
+  .grid { display: grid; gap: 10px; }
+  .stages { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .weapons { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .tile {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .tile .sub { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+
+  .year h2 { font-size: 18px; margin: 36px 0 12px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); color: var(--muted); font-weight: 600; }
+  tbody tr { background: var(--panel); cursor: pointer; }
+  tbody tr:hover { background: var(--panel-2); }
+  tbody tr.current { outline: 2px solid var(--accent); outline-offset: -2px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--rc); margin-right: 6px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--accent); color: #111; padding: 8px 16px; border-radius: 8px;
+    font-weight: 700; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 640px) {
+    form.controls { grid-template-columns: 1fr 1fr; }
+    .field.kw { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Monthly <span>League</span></h1>
+    <p>キーワードと年月から、その月のルール・ステージ・ブキを決定します。同じキーワードなら誰が開いても同じ結果になります。</p>
+  </header>
+
+  <form class="controls" id="form" autocomplete="off">
+    <div class="field kw">
+      <label for="kw">キーワード</label>
+      <input type="text" id="kw" placeholder="例: いつものメンバー">
+    </div>
+    <div class="field">
+      <label for="ym">年月</label>
+      <input type="month" id="ym">
+    </div>
+    <div class="field">
+      <label for="ns">ステージ数</label>
+      <input type="number" id="ns" min="1" max="10" value="3">
+    </div>
+    <div class="field">
+      <label for="nw">ブキ数</label>
+      <input type="number" id="nw" min="1" max="16" value="4">
+    </div>
+    <div class="options">
+      <label><input type="checkbox" id="nawabari"> ナワバリバトルを含める</label>
+      <span class="spacer"></span>
+      <button type="button" class="ghost" id="share">共有URLをコピー</button>
+    </div>
+  </form>
+
+  <div class="month-nav">
+    <button type="button" class="ghost" id="prev">◀ 前月</button>
+    <h2 id="title"></h2>
+    <button type="button" class="ghost" id="next">次月 ▶</button>
+  </div>
+
+  <section class="card">
+    <h3>RULE</h3>
+    <div id="rule"></div>
+  </section>
+  <section class="card">
+    <h3>STAGES</h3>
+    <div class="grid stages" id="stages"></div>
+  </section>
+  <section class="card">
+    <h3>WEAPONS</h3>
+    <div class="grid weapons" id="weapons"></div>
+  </section>
+
+  <section class="year">
+    <h2 id="yearTitle"></h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>月</th><th>ルール</th><th>ステージ</th><th>ブキ</th></tr></thead>
+        <tbody id="yearBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast">コピーしました</div>
+
+<script>
+// ===== データ（スプラトゥーン3） =====
+const RULES = [
+  { name: "ガチエリア", color: "var(--rule-area)" },
+  { name: "ガチヤグラ", color: "var(--rule-yagura)" },
+  { name: "ガチホコバトル", color: "var(--rule-hoko)" },
+  { name: "ガチアサリ", color: "var(--rule-asari)" },
+];
+const NAWABARI = { name: "ナワバリバトル", color: "var(--rule-nawabari)" };
+
+const STAGES = [
+  "ユノハナ大渓谷", "ゴンズイ地区", "ヤガラ市場", "マテガイ放水路", "ナメロウ金属",
+  "マサバ海峡大橋", "キンメダイ美術館", "マヒマヒリゾート&スパ", "海女美術大学", "チョウザメ造船",
+  "ザトウマーケット", "スメーシーワールド", "クサヤ温泉", "ヒラメが丘団地", "ナンプラー遺跡",
+  "マンタマリア号", "タラポートショッピングパーク", "コンブトラック", "タカアシ経済特区", "オヒョウ海運",
+  "バイガイ亭", "ネギトロ炭鉱", "カジキ空港", "リュウグウターミナル", "デカライン高架下",
+];
+
+const WEAPON_CLASSES = {
+  "シューター": ["ボールドマーカー", "わかばシューター", "シャープマーカー", "プロモデラーMG", "スプラシューター",
+    ".52ガロン", "N-ZAP85", "プライムシューター", ".96ガロン", "ジェットスイーパー",
+    "スペースシューター", "L3リールガン", "H3リールガン", "ボトルガイザー"],
+  "ブラスター": ["ノヴァブラスター", "ホットブラスター", "ロングブラスター", "クラッシュブラスター",
+    "ラピッドブラスター", "Rブラスターエリート", "S-BLAST92"],
+  "ローラー": ["カーボンローラー", "スプラローラー", "ダイナモローラー", "ヴァリアブルローラー", "ワイドローラー"],
+  "フデ": ["パブロ", "ホクサイ", "フィンセント"],
+  "チャージャー": ["スクイックリンα", "スプラチャージャー", "スプラスコープ", "リッター4K", "4Kスコープ",
+    "14式竹筒銃・甲", "ソイチューバー", "R-PEN/5H"],
+  "スロッシャー": ["バケットスロッシャー", "ヒッセン", "スクリュースロッシャー", "オーバーフロッシャー",
+    "エクスプロッシャー", "モップリン"],
+  "スピナー": ["スプラスピナー", "バレルスピナー", "ハイドラント", "クーゲルシュライバー", "ノーチラス47", "イグザミナー"],
+  "マニューバー": ["スパッタリー", "スプラマニューバー", "ケルビン525", "デュアルスイーパー",
+    "クアッドホッパーブラック", "ガエンFF"],
+  "シェルター": ["パラシェルター", "キャンピングシェルター", "スパイガジェット", "24式張替傘・甲"],
+  "ストリンガー": ["トライストリンガー", "LACT-450", "フルイドV"],
+  "ワイパー": ["ドライブワイパー", "ジムワイパー", "デンタルワイパーミント"],
+};
+const WEAPONS = Object.entries(WEAPON_CLASSES).flatMap(([cls, list]) => list.map(name => ({ name, cls })));
+
+// ===== シード付き乱数 =====
+function hash(str) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0) ^ (h1 >>> 0);
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffled(list, seedStr) {
+  const r = rng(hash(seedStr));
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ローテーション：キーワードごとに「山札」をシャッフルし、月が進むごとに順番に引いていく。
+// 山札を使い切ったら次の周回用に再シャッフル。全種類が一巡するまで同じものは出ない。
+function draw(list, count, keyword, category, monthIndex) {
+  count = Math.min(count, list.length);
+  const start = monthIndex * count;
+  const out = [];
+  const seen = new Set();
+  let pos = start;
+  while (out.length < count) {
+    const cycle = Math.floor(pos / list.length);
+    const deck = shuffled(list, `${keyword}|${category}|${cycle}`);
+    const item = deck[((pos % list.length) + list.length) % list.length];
+    const key = item.name ?? item;
+    if (!seen.has(key)) { seen.add(key); out.push(item); }
+    pos++;
+  }
+  return out;
+}
+
+function generate(keyword, year, month, opts) {
+  const idx = year * 12 + (month - 1);
+  const rules = opts.nawabari ? [NAWABARI, ...RULES] : RULES;
+  return {
+    rule: draw(rules, 1, keyword, "rule" + (opts.nawabari ? "+n" : ""), idx)[0],
+    stages: draw(STAGES, opts.stages, keyword, "stage", idx),
+    weapons: draw(WEAPONS, opts.weapons, keyword, "weapon", idx),
+  };
+}
+
+// ===== UI =====
+const $ = id => document.getElementById(id);
+const els = { kw: $("kw"), ym: $("ym"), ns: $("ns"), nw: $("nw"), nawabari: $("nawabari") };
+
+function clampInt(v, min, max, def) {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : def;
+}
+function currentYM() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function parseYM(s) {
+  const m = /^(\d{4})-(\d{1,2})$/.exec(s || "");
+  if (!m) return null;
+  const mo = +m[2];
+  return mo >= 1 && mo <= 12 ? { y: +m[1], m: mo } : null;
+}
+function state() {
+  const ym = parseYM(els.ym.value) || parseYM(currentYM());
+  return {
+    keyword: els.kw.value.trim(),
+    y: ym.y, m: ym.m,
+    opts: {
+      stages: clampInt(els.ns.value, 1, 10, 3),
+      weapons: clampInt(els.nw.value, 1, 16, 4),
+      nawabari: els.nawabari.checked,
+    },
+  };
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function buildQuery(s) {
+  const p = new URLSearchParams();
+  if (s.keyword) p.set("keyword", s.keyword);
+  p.set("ym", `${s.y}-${String(s.m).padStart(2, "0")}`);
+  if (s.opts.stages !== 3) p.set("stages", s.opts.stages);
+  if (s.opts.weapons !== 4) p.set("weapons", s.opts.weapons);
+  if (s.opts.nawabari) p.set("nawabari", "1");
+  return p.toString();
+}
+
+function render() {
+  const s = state();
+  const r = generate(s.keyword, s.y, s.m, s.opts);
+
+  $("title").innerHTML = `${s.y}年${s.m}月<small>${s.keyword ? "「" + esc(s.keyword) + "」" : "キーワードなし"}</small>`;
+  $("rule").innerHTML = `<span class="rule-badge" style="--rc:${r.rule.color}">${esc(r.rule.name)}</span>`;
+  $("stages").innerHTML = r.stages.map(n => `<div class="tile">${esc(n)}</div>`).join("");
+  $("weapons").innerHTML = r.weapons.map(w => `<div class="tile">${esc(w.name)}<span class="sub">${esc(w.cls)}</span></div>`).join("");
+
+  $("yearTitle").textContent = `${s.y}年の一覧`;
+  let rows = "";
+  for (let m = 1; m <= 12; m++) {
+    const x = generate(s.keyword, s.y, m, s.opts);
+    rows += `<tr data-m="${m}" class="${m === s.m ? "current" : ""}">
+      <td>${m}月</td>
+      <td><span class="dot" style="--rc:${x.rule.color}"></span>${esc(x.rule.name)}</td>
+      <td>${x.stages.map(esc).join("<br>")}</td>
+      <td>${x.weapons.map(w => esc(w.name)).join("<br>")}</td>
+    </tr>`;
+  }
+  $("yearBody").innerHTML = rows;
+
+  try { history.replaceState(null, "", "?" + buildQuery(s)); } catch {}
+}
+
+function shiftMonth(delta) {
+  const s = state();
+  const idx = s.y * 12 + (s.m - 1) + delta;
+  els.ym.value = `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`;
+  render();
+}
+
+// URLパラメータ（?keyword=...&ym=2026-10）から初期化
+(function init() {
+  const p = new URLSearchParams(location.search);
+  els.kw.value = p.get("keyword") ?? p.get("k") ?? "";
+  const ym = parseYM(p.get("ym"));
+  els.ym.value = ym ? `${ym.y}-${String(ym.m).padStart(2, "0")}` : currentYM();
+  els.ns.value = clampInt(p.get("stages"), 1, 10, 3);
+  els.nw.value = clampInt(p.get("weapons"), 1, 16, 4);
+  els.nawabari.checked = p.get("nawabari") === "1";
+
+  $("form").addEventListener("input", render);
+  $("form").addEventListener("submit", e => { e.preventDefault(); render(); });
+  $("prev").addEventListener("click", () => shiftMonth(-1));
+  $("next").addEventListener("click", () => shiftMonth(1));
+  $("yearBody").addEventListener("click", e => {
+    const tr = e.target.closest("tr[data-m]");
+    if (!tr) return;
+    els.ym.value = `${state().y}-${String(tr.dataset.m).padStart(2, "0")}`;
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  $("share").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      const t = $("toast"); t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 1400);
+    } catch { prompt("このURLをコピーしてください", location.href); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
